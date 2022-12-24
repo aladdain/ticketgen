@@ -1,29 +1,18 @@
-import { Grid, Toolbar } from "@mui/material";
-import { FC } from "react";
-import { CookiesProvider } from "react-cookie";
-import { EditorProvider } from "../EditorContext";
-import Form from "./Form";
+import { Box, Toolbar } from "@mui/material";
+import { FC, ReactNode } from "react";
 import NavBar from "./NavBar";
-import Viewer from "./Viewer";
 
-const Layout: FC = () => {
+interface Props {
+	children: ReactNode
+}
+
+const Layout: FC<Props> = ({children}) => {
 	return (
-		<div>
+		<Box sx={{ flexGrow: 1, minHeight: "100%" }}>
 			<NavBar />
 			<Toolbar />
-			<CookiesProvider>
-				<EditorProvider>
-					<Grid container>
-						<Grid item xs={3}>
-							<Form />
-						</Grid>
-						<Grid item xs={9}>
-							<Viewer />
-						</Grid>
-					</Grid>
-				</EditorProvider>
-			</CookiesProvider>
-		</div>
+			{children}
+		</Box>
 	);
 };
 

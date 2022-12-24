@@ -48,16 +48,16 @@ class Editor {
         }
     }
 
-    async edit(data:DataProps) {
+    async edit(data:DataProps, type: "regular" | "vip") {
         try {
             await this.load()
 
             const helveticaFont = await this.doc?.embedFont(StandardFonts.HelveticaBold)
 
             this.addText(data.name, 0, {
-                x: 280,
+                x: 270,
                 y: 562,
-                size: 15,
+                size: 14,
                 font: helveticaFont
             })
 
@@ -65,35 +65,47 @@ class Editor {
             this.addText(format(dt, "EEEE d LLLL yyyy") + ` Kickoff at ${format(dt, "HH:mm")}`, 0, {
                 x: 168,
                 y: 528,
-                size: 14,
+                size: 12,
                 font: helveticaFont
             })
 
-            this.addText(data.membership, 0, {
-                x: 215,
+            this.addText(data.membership.toString(), 0, {
+                x: 210,
                 y: 507,
-                size: 12,
+                size: 11,
                 font: helveticaFont
             })
 
-            this.addText(data.area, 0, {
-                x: 175,
-                y: 484,
-                size: 12,
+            this.addText(data.area.toString(), 0, {
+                x: 172,
+                y: type === "regular" ? 484 : 488,
+                size: 11,
                 font: helveticaFont
             })
 
-            this.addText(data.row, 0, {
-                x: 285,
-                y: 484,
-                size: 12,
+            this.addText(data.row.toString(), 0, {
+                x: type === "regular" ? 285 : 296,
+                y: type === "regular" ? 484 : 488,
+                size: 11,
                 font: helveticaFont
             })
 
-            this.addText(data.seat, 0, {
-                x: 383,
-                y: 484,
-                size: 12,
+            this.addText(data.seat.toString(), 0, {
+                x: type === "regular" ? 378 : 389,
+                y: type === "regular" ? 484 : 488,
+                size: 11,
+                font: helveticaFont
+            })
+
+            let entry = data.entry
+            if(data.door) {
+                entry += " " + data.door
+            }
+
+            this.addText(entry as string, 0, {
+                x: 205,
+                y: type === "regular" ? 461 : 461,
+                size: 11,
                 font: helveticaFont
             })
 
@@ -110,7 +122,7 @@ class Editor {
             const s_size = 80
             this.addImageFormData(data.qr, 0, {
                 x: page.getWidth() - s_size,
-                y: 163,
+                y: type === "regular" ? 163 : 161,
                 width: s_size,
                 height: s_size
             })

@@ -3,7 +3,7 @@ import { FC, useContext, useMemo } from "react";
 import { EditorContext } from "../EditorContext";
 
 const Viewer:FC = () => {
-    const {state: {pdfData}} = useContext(EditorContext)
+    const {state: {pdfData, type}} = useContext(EditorContext)
 
     const docUrl = useMemo(() => {
         if(pdfData) {            
@@ -11,13 +11,13 @@ const Viewer:FC = () => {
             const blob   = new Blob( [ bytes ], { type: "application/pdf" } );
             return URL.createObjectURL( blob );
         } else {
-            return "ticket.pdf"
+            return type === "regular" ? "ticket.pdf" : "vip.pdf"
         }
-    }, [pdfData])
+    }, [pdfData, type])
 
     return (
-        <Box sx={{p: 3, pt: 5}}>
-            <object data={docUrl} type="application/pdf" width="100%" height={800}>
+        <Box sx={{height: "100%"}}>
+            <object data={`${docUrl}#toolbar=0&navpanes=0`} type="application/pdf" width="100%" height="100%">
                 PDF ticket viewer
             </object>
         </Box>                  

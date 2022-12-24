@@ -9,4 +9,24 @@ export type DataProps = {
     entry?: string
     code: string
     qr: string
+    door?: string
 }
+
+export type XlsxDataProps = DataProps & {
+    vip: boolean
+}
+
+export type ResolvedOCR = DataProps & {
+    type: "regular" | "vip"
+}
+
+export type OCRResponse = {
+	ParsedResults: {
+		FileParseExitCode: number;
+		ParsedText: string;
+		ErrorMessage: string;
+		ErrorDetails: string;
+	}[];
+	IsErroredOnProcessing: boolean;
+	OCRExitCode: number;
+};

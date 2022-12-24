@@ -2,14 +2,17 @@ import React, { createContext, Dispatch, FC, Reducer, useReducer } from "react"
 
 export type EditorProps = {
     pdfData: ArrayBufferLike | null
+    type: "vip" | "regular"
 }
 
 const initial_state:EditorProps = {
-    pdfData: null
+    pdfData: null,
+    type: "regular"
 }
 
 export enum Actions {
-    DATA_CHANGED = "data_changed"
+    DATA_CHANGED = "data_changed",
+    TYPE_CHANGED = "type_changed"
 }
 
 type ActionProps = {
@@ -26,6 +29,8 @@ const reducer:Reducer<EditorProps, ActionProps> = (state, action) => {
     switch(action.type) {
         case Actions.DATA_CHANGED:
             return {...state, pdfData: action.payload}
+        case Actions.TYPE_CHANGED:
+            return {...state, type: action.payload}
         default:
             return {...state}
     }

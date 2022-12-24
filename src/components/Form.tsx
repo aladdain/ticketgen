@@ -1,11 +1,51 @@
-import { Box, Button, TextField, Typography } from "@mui/material";
-import { FC, useCallback, useContext, useEffect, useState } from "react";
+import {
+	Box,
+	Button,
+	FormControl,
+	Grid,
+	InputLabel,
+	MenuItem,
+	Select,
+	Stack,
+	TextField,
+	Typography,
+} from "@mui/material";
+import { useSnackbar } from "notistack";
+import {
+	FC,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { useCookies } from "react-cookie";
 import { Actions, EditorContext } from "../EditorContext";
 import Editor from "../lib/editor";
 import { genCode } from "../lib/helpers";
 import { DataProps } from "../types";
-import ImageForm from "./ImageForm";
+import DownloadButton from "./DownloadButton";
+
+export const gates = [
+	"West Stand Turnstile",
+	"East Stand Turnstile",
+	"North Bank Turnstile",
+	"Clock End Turnstile",
+];
+
+export const gates_doors: Record<string, string[]> = {
+	"West Stand Turnstile": ["A", "S"],
+	"East Stand Turnstile": ["J", "H"],
+	"North Bank Turnstile": ["C", "B", "D", "E", "F", "G"],
+	"Clock End Turnstile": ["M", "N", "O", "P", "R", "K"],
+};
+
+export const vip_gates = [
+	"Club Entrance West",
+	"Club Entrance East",
+	"Club Entrance North",
+	"Club Entrance South",
+];
 
 const Form: FC = () => {
 	const [data, setData] = useState<DataProps>({
@@ -17,7 +57,8 @@ const Form: FC = () => {
 		date: "",
 		membership: "",
 		code: "",
-		qr: ""
+		qr: "",
+		door: "",
 	});
 	const [nameError, setNameError] = useState<string | null>(null);
 	const [codeError, setCodeError] = useState<string | null>(null);
@@ -25,25 +66,30 @@ const Form: FC = () => {
 	const [rowError, setRowError] = useState<string | null>(null);
 	const [seatError, setSeatError] = useState<string | null>(null);
 	const [dateError, setDateError] = useState<string | null>(null);
+	const [entryError, setEntryError] = useState<string | null>(null);
+	const [doorError, setDoorError] = useState<string | null>(null);
 	const [membershipError, setMembershipError] = useState<string | null>(null);
-	const [qrFocused, setQRFocused] = useState<boolean>(false)
+	const [qrFocused, setQRFocused] = useState<boolean>(false);
 
-	const {dispatch} = useContext(EditorContext)
+	const {
+		dispatch,
+		state: { type },
+	} = useContext(EditorContext);
 
-	const [cookies] = useCookies(["settings"])
+	const [cookies] = useCookies(["settings"]);
 
 	// load default settings
 	useEffect(() => {
-		const cookie = cookies.settings
-		if(cookie) {
-			setData(prev => ({
+		const cookie = cookies.settings;
+		if (cookie) {
+			setData((prev) => ({
 				...prev,
-				"name": cookie.name,
-				"date": cookie.date,
-				"membership": cookie.membership
-			}))
+				name: cookie.name,
+				date: cookie.date,
+				membership: cookie.membership,
+			}));
 		}
-	}, [cookies])
+	}, [cookies]);
 
 	const updateData = useCallback((target: string, value: string | number) => {
 		setData((prev) => ({ ...prev, [target]: value }));
@@ -112,49 +158,128 @@ const Form: FC = () => {
 		return true;
 	}, [data.seat, seatError, setSeatError]);
 
+	const validateEntry = useCallback(() => {
+		if (!data.entry) {
+			setEntryError("Not valid Entry");
+			return false;
+		}
+		if (entryError) setEntryError(null);
+		return true;
+	}, [data.entry, entryError, setEntryError]);
+
+	const validateDoor = useCallback(() => {
+		if (type === "regular" && !data.door) {
+			setDoorError("Not valid Turnstil");
+			return false;
+		}
+		if (doorError) setDoorError(null);
+		return true;
+	}, [type, data.door, doorError, setDoorError]);
+
+	const { enqueueSnackbar } = useSnackbar();
+
 	const apply = useCallback(async () => {
 		if (!validateName()) return;
 		if (!validateMembership()) return;
 		if (!validateArea()) return;
 		if (!validateSeat()) return;
 		if (!validateRow()) return;
+		if (!validateEntry()) return;
+		if (!validateDoor()) return;
 
-		try {			
-			const editor = new Editor("ticket.pdf")
-			
-			const pdfData = await editor.edit(data)
+		try {
+			const editor = new Editor(
+				type === "regular" ? "ticket.pdf" : "vip.pdf"
+			);
+
+			const pdfData = await editor.edit(data, type);
 
 			dispatch({
 				type: Actions.DATA_CHANGED,
-				payload: pdfData
-			})
+				payload: pdfData,
+			});
 		} catch (error) {
-			console.error(error)
+			console.error(error);
+			enqueueSnackbar("Oops, something wrong happened", {
+				variant: "error",
+			});
 		}
-	}, [data, dispatch]);
+	}, [data, dispatch, type]);
 
 	const handleCode = useCallback(async () => {
-		if(data.code) {
+		if (data.code) {
 			try {
-				const preview = await genCode(data.code)
-				updateData("qr", preview)
+				const preview = await genCode(data.code);
+				updateData("qr", preview);
 			} catch (error) {
-				console.error(error)
+				enqueueSnackbar("Oops, something wrong happened", {
+					variant: "error",
+				});
+				console.error(error);
 			}
 		}
-	}, [data.code, updateData])
+	}, [data.code, updateData]);
 
 	useEffect(() => {
-		if(data.code && !qrFocused) {
-			handleCode()
+		if (data.code && !qrFocused) {
+			handleCode();
 		}
-	}, [data.code, qrFocused])
+	}, [data.code, qrFocused]);
+
+	useEffect(() => {
+		dispatch({
+			type: Actions.DATA_CHANGED,
+			payload: null,
+		});
+		if (data.door && type === "vip") {
+			updateData("door", "");
+		}
+	}, [type, data.door]);
+
+	const doorList = useMemo(
+		() => (type === "regular" && data.entry ? gates_doors[data.entry] : []),
+		[data.entry, type]
+	);
+
+	const clear = useCallback(() => {
+		setData((prev) => ({
+			...prev,
+			area: "",
+			row: "",
+			seat: "",
+			code: "",
+			qr: "",
+			door: "",
+			membership: ""
+		}));
+	}, []);
 
 	return (
-		<Box sx={{p:3, textAlign: "left", pt: 5}}>
+		<Box sx={{ p: 3, textAlign: "left", pt: 5, minHeight: "100%" }}>
 			<Typography variant="body1">
-				Please fill in the form below, and add QR code image.<br />Then click on Download once all changes are made.
+				Please fill in the form below, and add QR code image.
+				<br />
+				Then click on Download once all changes are made.
 			</Typography>
+			<FormControl variant="outlined" fullWidth sx={{ mt: 3 }}>
+				<InputLabel>Ticket Type</InputLabel>
+				<Select
+					value={type}
+					onChange={(event) =>
+						dispatch({
+							type: Actions.TYPE_CHANGED,
+							payload: event.target.value,
+						})
+					}
+				>
+					<MenuItem key="vip" value="vip">
+						VIP
+					</MenuItem>
+					<MenuItem key="regular" value="regular">
+						Regular
+					</MenuItem>
+				</Select>
+			</FormControl>
 			<TextField
 				variant="outlined"
 				placeholder="Guest Team Name"
@@ -171,7 +296,9 @@ const Form: FC = () => {
 				variant="outlined"
 				placeholder="Membership Id"
 				label="Membership"
-				onChange={(event) => updateData("membership", event.target.value)}
+				onChange={(event) =>
+					updateData("membership", event.target.value)
+				}
 				fullWidth
 				error={Boolean(membershipError)}
 				helperText={membershipError || ""}
@@ -230,6 +357,62 @@ const Form: FC = () => {
 				sx={{ mt: 2 }}
 				value={data.seat}
 			/>
+			{type === "regular" ? (
+				<Grid container sx={{ mt: 2 }} spacing={1}>
+					<Grid item xs={8}>
+						<FormControl variant="outlined" fullWidth>
+							<InputLabel>Entry</InputLabel>
+							<Select
+								value={data.entry}
+								error={Boolean(entryError)}
+								onChange={(event) =>
+									updateData("entry", event.target.value)
+								}
+							>
+								{gates?.map((k, key) => (
+									<MenuItem key={key} value={k}>
+										{k}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+					</Grid>
+					<Grid item xs={4}>
+						<FormControl variant="outlined" fullWidth>
+							<InputLabel>Turnstil</InputLabel>
+							<Select
+								value={data.door}
+								error={Boolean(doorError)}
+								onChange={(event) =>
+									updateData("door", event.target.value)
+								}
+							>
+								{doorList?.map((k, key) => (
+									<MenuItem key={key} value={k}>
+										{k}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+					</Grid>
+				</Grid>
+			) : (
+				<FormControl variant="outlined" fullWidth sx={{ mt: 2 }}>
+					<InputLabel>Entry</InputLabel>
+					<Select
+						value={data.entry}
+						onChange={(event) =>
+							updateData("entry", event.target.value)
+						}
+					>
+						{vip_gates?.map((k, key) => (
+							<MenuItem key={key} value={k}>
+								{k}
+							</MenuItem>
+						))}
+					</Select>
+				</FormControl>
+			)}
 			<TextField
 				variant="outlined"
 				placeholder="Qr code id"
@@ -239,8 +422,8 @@ const Form: FC = () => {
 				error={Boolean(codeError)}
 				helperText={codeError || ""}
 				onBlur={() => {
-					validateCode()
-					setQRFocused(false)
+					validateCode();
+					setQRFocused(false);
 				}}
 				onFocus={() => setQRFocused(true)}
 				sx={{ mt: 2 }}
@@ -260,13 +443,22 @@ const Form: FC = () => {
 						}}
 						justifyContent="center"
 					>
-						<img  src={data.qr} alt="qr code" width={100} height={100} style={{display: "block"}} /> 
+						<img
+							src={data.qr}
+							alt="qr code"
+							width={100}
+							height={100}
+							style={{ display: "block" }}
+						/>
 					</Box>
 				</Box>
 			)}
-			<Button variant="contained" onClick={apply} sx={{ mt: 2 }} fullWidth>
-				Apply
-			</Button>
+			<Stack direction={"row"} spacing={1} sx={{ mt: 2 }}>
+				<Button variant="outlined" onClick={apply} fullWidth>
+					Apply
+				</Button>
+				<DownloadButton data={data} onSuccess={clear} />
+			</Stack>
 		</Box>
 	);
 };
