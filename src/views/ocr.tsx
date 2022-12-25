@@ -1,8 +1,10 @@
-import { Add } from "@mui/icons-material";
+import { Add, Close } from "@mui/icons-material";
 import {
 	Box,
 	Button,
 	Container,
+	Divider,
+	FormHelperText,
 	Stack,
 	Typography,
 } from "@mui/material";
@@ -12,7 +14,7 @@ import Layout from "../components/Layout";
 import OcrItem from "../components/OcrItem";
 
 const Ocr: FC = () => {
-	const [files, setFiles] = useState<FileList | null>(null);
+	const [files, setFiles] = useState<File[]>([]);
 
 	const handleClick = useCallback(
 		() => document.getElementById("files")?.click(),
@@ -20,7 +22,11 @@ const Ocr: FC = () => {
 	);
 
 	const onChange = useCallback(
-		(event: ChangeEvent<HTMLInputElement>) => setFiles(event.target.files),
+		(event: ChangeEvent<HTMLInputElement>) =>
+			setFiles((prev) => [
+				...prev,
+				...Array.from(event.target.files || []).slice(0, 5),
+			]),
 		[]
 	);
 
@@ -32,7 +38,7 @@ const Ocr: FC = () => {
 			sx={{ minHeight: "100vh" }}
 		>
 			<Layout>
-				{!files ? (
+				{files.length === 0 ? (
 					<Container maxWidth="sm">
 						<Box
 							sx={{
@@ -56,7 +62,7 @@ const Ocr: FC = () => {
 								startIcon={<Add color="inherit" />}
 								onClick={handleClick}
 							>
-                                Select screenshots
+								Select screenshots
 							</Button>
 							<input
 								type="file"
@@ -66,12 +72,47 @@ const Ocr: FC = () => {
 								multiple
 								onChange={onChange}
 							/>
+							<FormHelperText sx={{mt:2, textAlign: "center"}}>
+								Please select a maximum of 5 tickets per batch
+							</FormHelperText>
 						</Box>
 					</Container>
 				) : files.length > 0 ? (
-					<Container maxWidth="lg" sx={{pt: 5}}>
-						{Array.from(files).map((k, key) => (
-							<OcrItem key={k.name} file={k} />
+					<Container maxWidth="lg" sx={{ pt: 5 }}>
+						<Stack direction={"row"} justifyContent="space-between">
+							<Typography
+								variant="h6"
+								sx={{ fontWeight: 700 }}
+							>{`Tickets (${files.length})`}</Typography>
+							<Box>
+								<Button
+									variant="text"
+									onClick={() => setFiles([])}
+									startIcon={<Close color="inherit" />}
+									sx={{mr: 1}}
+								>
+									Clear
+								</Button>
+								<Button
+									variant="contained"
+									startIcon={<Add color="inherit" />}
+									onClick={handleClick}
+								>
+									Add screenshot
+								</Button>
+							</Box>
+							<input
+								type="file"
+								id="files"
+								name="files"
+								style={{ display: "none" }}
+								multiple
+								onChange={onChange}
+							/>
+						</Stack>
+						<Divider sx={{ mt: 2, mb: 2 }} />
+						{files.map((k, key) => (
+							<OcrItem key={k.name} file={k} index={key} />
 						))}
 					</Container>
 				) : null}

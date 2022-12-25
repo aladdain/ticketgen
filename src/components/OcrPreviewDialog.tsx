@@ -1,4 +1,5 @@
 import {
+	Box,
 	Button,
 	Dialog,
 	DialogActions,
@@ -13,8 +14,8 @@ import { ResolvedOCR } from "../types";
 interface Props {
 	open: boolean;
 	onClose: () => void;
-	image: string;
-	data: ResolvedOCR;
+	image: string | null;
+	data: ResolvedOCR | null;
 }
 
 const OcrPreviewDialog: FC<Props> = ({ open, onClose, image, data }) => {
@@ -25,14 +26,14 @@ const OcrPreviewDialog: FC<Props> = ({ open, onClose, image, data }) => {
 				{image && data ? (
 					<Grid container spacing={2}>
 						<Grid item xs={6}>
-							<img src={image} alt="" style={{ height: 400 }} />
+							<img src={image} alt="" style={{ width: 300 }} />
 						</Grid>
 						<Grid item xs={6}>
-                            {Object.keys(data).map((k, key) =>
-                                <Fragment key={key}>
+                            {Object.keys(data).filter(k => k !== "image" && k !== "qr").map((k, key) =>
+                                <Box key={key} sx={{mt: 1}}>
                                     <Typography variant="body2"><b>{k}</b></Typography>
                                     <Typography variant="inherit">{(data as any)[k]}</Typography>
-                                </Fragment> 
+                                </Box> 
                             )}
                         </Grid>
 					</Grid>
